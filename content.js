@@ -1,5 +1,4 @@
 function addRemoveButtons() {
-  console.log('Adding remove buttons');
   // Select all apartment listing elements
   const listings = document.querySelectorAll('article.placard');
   
@@ -7,7 +6,6 @@ function addRemoveButtons() {
     // Find the header element within the listing
     const header = listing.querySelector('header');
     if (!header) {
-      console.log(`Header not found for listing ${index}`);
       return;
     }
 
@@ -30,9 +28,9 @@ function addRemoveButtons() {
     const removeButton = document.createElement('button');
     removeButton.className = 'extension-remove-button';
     removeButton.style.cssText = `
-    border: none;
-    cursor: pointer;
-    padding: 0;
+      border: none;
+      cursor: pointer;
+      padding: 0;
     `;
 
     // Create an image element
@@ -40,8 +38,8 @@ function addRemoveButtons() {
     img.src = chrome.runtime.getURL('icons/trashIcon.png');
     img.alt = 'Remove';
     img.style.cssText = `
-    width: 24px;
-    height: 24px;
+      width: 24px;
+      height: 24px;
     `;
 
     // Append the image to the button
@@ -49,86 +47,87 @@ function addRemoveButtons() {
     
     // Add click event listener to remove the listing
     removeButton.addEventListener('click', (event) => {
-      let listingId = listing.getAttribute('data-listingid');
       event.preventDefault();
       event.stopPropagation();
-      listing.style.display = 'none';
-      console.log(`Listing ${listingId} hidden`);
 
-      // Store the removed listing ID in Chrome storage
-      chrome.storage.sync.get({removedListingIds: []}, (data) => {
-        const removedListingIds = data.removedListingIds;
-        if (!removedListingIds.includes(listingId)) {
-          removedListingIds.push(listingId);
-          chrome.storage.sync.set({removedListingIds: removedListingIds}, () => {
-            console.log(`Listing ID ${listingId} stored as removed`);
+      let listingId = listing.getAttribute('data-listingid');
+      let streetAddress = listing.getAttribute('data-streetaddress');
+      let titleElement = listing.querySelector('.js-placardTitle.title');
+      let title = titleElement ? titleElement.textContent.trim() : 'Unknown Title';
+
+      // Object to store additional info about the listing
+      const listingData = {
+        id: listingId,
+        streetAddress: streetAddress || 'Unknown Address',
+        title: title
+      };
+
+      // Hide the listing
+      listing.style.display = 'none';
+
+      // Store the listing object in Chrome storage
+      chrome.storage.sync.get({removedListings: []}, (data) => {
+        const removedListings = data.removedListings;
+        // Add the listingData object if it's not already in the storage
+        if (!removedListings.some(item => item.id === listingId)) {
+          removedListings.push(listingData);
+          chrome.storage.sync.set({removedListings: removedListings}, () => {
+            console.log(`Listing ${listingId} stored as removed with additional info`);
           });
         }
       });
 
-      // Find and remove the corresponding map pin
+      // Remove the display from the map
       const map = document.getElementById('map');
       if (map) {
-        // Look for the pin element with the matching listing ID
         const mapPin = map.querySelector(`[data-id="${listingId}"]`);
         if (mapPin) {
-          mapPin.style.display = 'none'; // or mapPin.remove() if you want to completely remove it
-          console.log(`Map pin for listing ${listingId} hidden`);
-        } else {
-          console.log(`Map pin for listing ${listingId} not found`);
+          mapPin.style.display = 'none';
         }
-      } else {
-        console.log('Map element not found');
       }
     });
-    
+
     // Add the button to the wrapper, then add wrapper to the header
     buttonWrapper.appendChild(removeButton);
     header.appendChild(buttonWrapper);
   });
 }
 
-//
+// remove the listings previously removed
 function removeListingsFromStorage(){
-  console.log(`removing listings from storage`);
-
-  chrome.storage.sync.get({removedListingIds: []}, function(data) {
-    if (data.removedListingIds.length !== 0) {
-        data.removedListingIds.forEach(function(listingId) {
-          // remove from list
+  chrome.storage.sync.get({removedListings: []}, function(data) {
+      if (data.removedListings.length !== 0) {
+        data.removedListings.forEach(function(listingData) {
+          const { id: listingId } = listingData;
           const listing = document.querySelector(`[data-listingid="${listingId}"]`);
-          listing.style.display = 'none';
+          if (listing) {
+            listing.style.display = 'none';
+          }
 
-          // Find and remove the corresponding map pin
           const map = document.getElementById('map');
           if (map) {
-            // Look for the pin element with the matching listing ID
             const mapPin = map.querySelector(`[data-id="${listingId}"]`);
             if (mapPin) {
-              mapPin.style.display = 'none'; // or mapPin.remove() if you want to completely remove it
-              console.log(`Map pin for listing ${listingId} hidden`);
-            } else {
-              console.log(`Map pin for listing ${listingId} not found`);
+              mapPin.style.display = 'none';
             }
-          } else {
-            console.log('Map element not found');
           }
         });
-    }
-  });
+      }
+    });
 }
 
 // Run the function when the page is fully loaded
 window.addEventListener('load', () => {
   setTimeout(removeListingsFromStorage, 1000);
-  // setTimeout(addRemoveButtons, 1000);
+  setTimeout(addRemoveButtons, 1000);
 });
 
 // Add a MutationObserver to handle dynamically loaded content
 const observer = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-      // setTimeout(addRemoveButtons, 500);
+      setTimeout(removeListingsFromStorage, 500);
+      setTimeout(addRemoveButtons, 500);
     }
   });
 });
@@ -139,7 +138,7 @@ observer.observe(document.body, {
   subtree: true
 });
 
-// Popup thing
+// Restore from popup
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "restore") {
       const listing = document.querySelector(`article[data-listingid="${request.listingId}"]`);
