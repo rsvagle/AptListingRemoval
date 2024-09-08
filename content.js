@@ -5,13 +5,22 @@ function addRemoveButtons() {
   listings.forEach((listing, index) => {
     // Find the header element within the listing
     const header = listing.querySelector('header');
-    if (!header) {
-      return;
-    }
 
     // Check if button already exists
-    if (header.querySelector('.extension-remove-button-wrapper')) {
+    if (header != null && header.querySelector('.extension-remove-button-wrapper')) {
       return;
+    }
+    else{
+      propertyInfoTab = listing.querySelector('.price-wrapper');
+      if(propertyInfoTab != null && propertyInfoTab.querySelector('.extension-remove-button-wrapper')){
+        return;
+      }
+      else{
+        propertyTitle = listing.querySelector('.property-title-wrapper');
+        if(propertyTitle != null && propertyTitle.querySelector('.extension-remove-button-wrapper')){
+          return;
+        }
+      }
     }
 
     // Create a wrapper div for the button
@@ -22,6 +31,7 @@ function addRemoveButtons() {
       margin-left: 10px;
       margin-right: 15px;
       vertical-align: middle;
+      position: relative;
     `;
 
     // Create remove button
@@ -31,6 +41,8 @@ function addRemoveButtons() {
       border: none;
       cursor: pointer;
       padding: 0;
+      float: right;
+      background-color: rgba(255,255,255,0);
     `;
 
     // Create an image element
@@ -89,7 +101,50 @@ function addRemoveButtons() {
 
     // Add the button to the wrapper, then add wrapper to the header
     buttonWrapper.appendChild(removeButton);
-    header.appendChild(buttonWrapper);
+
+    if(header != null){
+      header.appendChild(buttonWrapper);
+    }
+    else {
+      // No header
+      propertyInfoTab = listing.querySelector('.property-info');
+      priceWrapper = listing.querySelector('.price-wrapper');
+
+      if(priceWrapper != null){
+        buttonWrapper.style.cssText = `
+          display: inline-block;
+          vertical-align: middle;
+          position: relative;
+          flex-grow: 1;
+        `;
+        priceWrapper.appendChild(buttonWrapper);
+
+        // Move over save icon
+        propertyInfoTabSaveIcon = propertyInfoTab.querySelector('.favoriteIcon');
+        if(propertyInfoTabSaveIcon != null){
+          propertyInfoTabSaveIcon.style.cssText = `
+            top: 12px;
+            right: 40px;
+          `
+        }
+      }
+      else{
+        // Find property title wrapper
+        propertyTitle = listing.querySelector('.property-title-wrapper');
+        if(propertyTitle != null){
+          buttonWrapper.style.cssText = `
+            display: inline-block;
+            vertical-align: middle;
+            right: 20px;
+            position: relative;
+            flex-grow: 1;
+          `;
+
+          propertyTitle.style.cssText = `display: flex;`
+          propertyTitle.appendChild(buttonWrapper);    
+        }
+      }
+    }
   });
 }
 
