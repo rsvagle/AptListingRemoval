@@ -1,3 +1,4 @@
+// Append the remove button to each listing
 function addRemoveButtons() {
   // Select all apartment listing elements
   const listings = document.querySelectorAll('article.placard');
@@ -6,7 +7,7 @@ function addRemoveButtons() {
     // Find the header element within the listing
     const header = listing.querySelector('header');
 
-    // Check if button already exists
+    // Check if button already exists. It may be in different elements due to the way the listing are constructed
     if (header != null && header.querySelector('.extension-remove-button-wrapper')) {
       return;
     }
@@ -102,11 +103,12 @@ function addRemoveButtons() {
     // Add the button to the wrapper, then add wrapper to the header
     buttonWrapper.appendChild(removeButton);
 
+    // Add the button to whichever element we can find in the listing
     if(header != null){
       header.appendChild(buttonWrapper);
     }
     else {
-      // No header
+      // No header, check for another element that we can put the button into
       propertyInfoTab = listing.querySelector('.property-info');
       priceWrapper = listing.querySelector('.price-wrapper');
 
@@ -148,27 +150,28 @@ function addRemoveButtons() {
   });
 }
 
-// remove the listings previously removed
+// Remove the listings that in storage from being previously removed
 function removeListingsFromStorage(){
   chrome.storage.sync.get({removedListings: []}, function(data) {
-      if (data.removedListings.length !== 0) {
-        data.removedListings.forEach(function(listingData) {
-          const { id: listingId } = listingData;
-          const listing = document.querySelector(`[data-listingid="${listingId}"]`);
-          if (listing) {
-            listing.style.display = 'none';
-          }
+    if (data.removedListings.length !== 0) {
+      data.removedListings.forEach(function(listingData) {
+        const { id: listingId } = listingData;
+        const listing = document.querySelector(`[data-listingid="${listingId}"]`);
+        if (listing) {
+          listing.style.display = 'none';
+        }
 
-          const map = document.getElementById('map');
-          if (map) {
-            const mapPin = map.querySelector(`[data-id="${listingId}"]`);
-            if (mapPin) {
-              mapPin.style.display = 'none';
-            }
+        // Remove from the map too
+        const map = document.getElementById('map');
+        if (map) {
+          const mapPin = map.querySelector(`[data-id="${listingId}"]`);
+          if (mapPin) {
+            mapPin.style.display = 'none';
           }
-        });
-      }
-    });
+        }
+      });
+    }
+  });
 }
 
 // Run the function when the page is fully loaded
@@ -193,7 +196,7 @@ observer.observe(document.body, {
   subtree: true
 });
 
-// Restore from popup
+// Restore a listing from popup
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "restore") {
       const listing = document.querySelector(`article[data-listingid="${request.listingId}"]`);
